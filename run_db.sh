@@ -1,0 +1,1 @@
+docker run -p 127.0.0.1:25432:5432 --name pg_recr -e POSTGRES_DB=recr_db -e POSTGRES_PASSWORD=password --rm postgres:15.3-alpine3.18
