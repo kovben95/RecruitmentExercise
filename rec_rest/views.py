@@ -19,7 +19,7 @@ class DataViewSet(viewsets.ModelViewSet):
 
     def get_model(self, key):
         if key not in self._model:
-            self._model[key] = Table.objects.get(id=key).ModelClass
+            self._model[key] = Table.objects.get(id=key).ModelClass(old=False)
         return self._model[key]
 
     def get_queryset(self):

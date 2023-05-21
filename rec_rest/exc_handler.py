@@ -18,4 +18,4 @@ class InputDataFormatException(Exception):
 def exc_handler(exc, context):
     return JsonResponse({
         'error': str(exc),
-    }, status=400 if type(Exception) is InputDataFormatException else 500)
+    }, status=400 if type(exc) is InputDataFormatException else 500)
