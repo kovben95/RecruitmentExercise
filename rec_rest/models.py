@@ -2,9 +2,13 @@ from django.apps import AppConfig
 from django.db import models, transaction, connection
 from django.db.backends.sqlite3.schema import DatabaseSchemaEditor
 
+from rec_rest.exc_handler import InputDataFormatException
+from rec_rest.tools import verify_schema
 
-def typeNameToType(name: str):
-    assert name in ['str', 'int', 'bool']
+
+def typeNameToColumn(name: str, field_name: str):
+    if name not in ['str', 'int', 'bool']:
+        raise InputDataFormatException(f'Type of field {field_name} must be either "str", "int", or "bool", not {name}')
     if name == 'str':
         return models.TextField(default='')
     if name == 'int':
@@ -27,7 +31,7 @@ class Table(models.Model):
         self.old_schema = self.schema if self.id is not None else None
 
     def ModelClass(self, old=False):
-        schem = {k: typeNameToType(v) for k, v in (self.old_schema if old else self.schema).items()}
+        schem = {k: typeNameToColumn(v, k) for k, v in (self.old_schema if old else self.schema).items()}
         schem['__module__'] = f'rec_rest.models'
         return type(f'Class_{self.id}', (models.Model,), schem)
 
@@ -35,6 +39,7 @@ class Table(models.Model):
         return f'Table {self.id}'
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        verify_schema(schema=self.schema)
         with transaction.atomic():
             super().save(force_insert, force_update, using, update_fields)
             schema_editor: DatabaseSchemaEditor
@@ -50,9 +55,11 @@ class Table(models.Model):
                         field = [a for a in mc._meta.get_fields() if a.attname == r][0]
                         schema_editor.remove_field(mc, field)
                     for a in added:
-                        f = typeNameToType(self.schema[a])
+                        f = typeNameToColumn(self.schema[a], a)
                         f.column = a
                         schema_editor.add_field(mc, f)
                     typeval = set(self.old_schema.keys()) & set(self.schema.keys())
                     for t in typeval:
-                        assert self.old_schema[t] == self.schema[t], 'Type changes not permitted'
+                        if self.old_schema[t] != self.schema[t]:
+                            raise InputDataFormatException(f'Type changes are not permitted for existing col: {t}: '
+                                                           f'{self.old_schema[t]} -> {self.schema[t]}')

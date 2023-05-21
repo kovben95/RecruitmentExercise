@@ -105,4 +105,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 APPEND_SLASH = False
 
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'rec_rest.exc_handler.exc_handler'
+}
+
 from .db_config import *
