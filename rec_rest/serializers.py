@@ -10,6 +10,9 @@ class TableSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class DataSerializer(serializers.ModelSerializer):
+    """
+    Serializer for dynamic model. Model = None set to dynamic model value before use
+    """
     class Meta:
         model = None
         fields = '__all__'

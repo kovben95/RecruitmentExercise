@@ -6,7 +6,13 @@ from rec_rest.exc_handler import InputDataFormatException
 from rec_rest.tools import verify_schema
 
 
-def typeNameToColumn(name: str, field_name: str):
+def type_name_to_column(name: str, field_name: str):
+    """
+    Convert type name to column
+    :param name: str representing col type
+    :param field_name: the name of field for verbose error message
+    :return:
+    """
     if name not in ['str', 'int', 'bool']:
         raise InputDataFormatException(f'Type of field {field_name} must be either "str", "int", or "bool", not {name}')
     if name == 'str':
@@ -30,8 +36,13 @@ class Table(models.Model):
         super().__init__(*args, **kwargs)
         self.old_schema = self.schema if self.id is not None else None
 
-    def ModelClass(self, old=False):
-        schem = {k: typeNameToColumn(v, k) for k, v in (self.old_schema if old else self.schema).items()}
+    def get_model_class(self, old=False):
+        """
+        create a dynamic model from the class and return it
+        :param old: bool: use old model or no
+        :return: the dynamic model class
+        """
+        schem = {k: type_name_to_column(v, k) for k, v in (self.old_schema if old else self.schema).items()}
         schem['__module__'] = f'rec_rest.models'
         return type(f'Class_{self.id}', (models.Model,), schem)
 
@@ -45,17 +56,17 @@ class Table(models.Model):
             schema_editor: DatabaseSchemaEditor
             with connection.schema_editor() as schema_editor:
                 if self.old_schema is None:
-                    mc = self.ModelClass(old=False)
+                    mc = self.get_model_class(old=False)
                     schema_editor.create_model(mc)
                 else:
-                    mc = self.ModelClass(old=True)
+                    mc = self.get_model_class(old=True)
                     added = self.schema.keys() - self.old_schema.keys()
                     removed = self.old_schema.keys() - self.schema.keys()
                     for r in removed:
                         field = [a for a in mc._meta.get_fields() if a.attname == r][0]
                         schema_editor.remove_field(mc, field)
                     for a in added:
-                        f = typeNameToColumn(self.schema[a], a)
+                        f = type_name_to_column(self.schema[a], a)
                         f.column = a
                         schema_editor.add_field(mc, f)
                     typeval = set(self.old_schema.keys()) & set(self.schema.keys())
